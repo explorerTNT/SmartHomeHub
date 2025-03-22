@@ -22,9 +22,13 @@ class PluginManager:
 
     def load_plugins(self, plugins_directory="modules"):
         logger.info(f"Начинаю загрузку плагинов из {plugins_directory}")
+        plugins_directory = os.path.normpath(plugins_directory)  # Нормализуем путь
         for root, dirs, files in os.walk(plugins_directory):
-            if "__init__.py" in files and "plugin.py" in files:  # Проверяем наличие plugin.py
-                module_name = root.replace(os.sep, ".")
+            logger.info(f"Проверка директории: {root}")
+            if "__init__.py" in files and "plugin.py" in files:
+                # Преобразуем путь в имя модуля
+                relative_path = os.path.relpath(root, os.path.dirname(os.path.abspath(__file__)))
+                module_name = relative_path.replace(os.sep, ".")
                 plugin_module_name = f"{module_name}.plugin"
                 logger.info(f"Обнаружен модуль: {module_name}, пытаюсь загрузить {plugin_module_name}")
                 try:
@@ -43,7 +47,7 @@ class PluginManager:
                     else:
                         logger.warning(f"В модуле {plugin_module_name} нет класса Plugin")
                 except Exception as e:
-                    logger.error(f"Ошибка при загрузке плагина {plugin_module_name}: {e}")
+                    logger.error(f"Ошибка при загрузке плагина {plugin_module_name}: {str(e)}")
         logger.info(f"Загрузка плагинов завершена. Загружено плагинов: {len(self.plugins)}")
 
 def run_flask():
@@ -60,12 +64,12 @@ async def main():
     load_plugins_use_case.execute()
     
     # Интеграция с UI
-    app.config['state'] = state  # Передача состояния в Flask
+    app.config['state'] = state
     register_ui(app, plugin_manager)
     
     # Запуск главного цикла
     while True:
-        await asyncio.sleep(1)  # Пример: держать систему активной
+        await asyncio.sleep(1)
 
 if __name__ == "__main__":
     flask_thread = threading.Thread(target=run_flask)
