@@ -2,7 +2,7 @@
 Система умного дома для мониторинга устройств. Поддерживает плагины для датчиков температуры, ПК и других устройств.
 
 ## Установка
-1. Клонируй репозиторий: `git clone https://github.com/твой_юзер/SmartHomeHub.git`
+1. Клонируй репозиторий: `https://github.com/explorerTNT/SmartHomeHub.git`
 2. Создай виртуальную среду: `python -m venv venv`
 3. Активируй: `source venv/bin/activate`
 4. Установи зависимости: `pip install psutil`
