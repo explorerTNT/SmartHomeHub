@@ -3,6 +3,7 @@ import importlib
 import threading
 import os
 import sys
+import subprocess
 from core.adapters.event_bus import EventBus
 from core.entities.state import State
 from core.use_cases.load_plugins import LoadPlugins
@@ -13,6 +14,33 @@ from core.logger import logger
 # Добавляем корень проекта в sys.path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+# Список зависимостей
+REQUIRED_PACKAGES = ["flask", "psutil"]
+
+def check_and_install_dependencies():
+    """Проверяет наличие зависимостей и предлагает установить их, если отсутствуют."""
+    missing_packages = []
+    for package in REQUIRED_PACKAGES:
+        try:
+            importlib.import_module(package)
+        except ImportError:
+            missing_packages.append(package)
+    
+    if missing_packages:
+        logger.warning(f"Отсутствуют зависимости: {', '.join(missing_packages)}")
+        response = input(f"Хотите установить отсутствующие зависимости ({', '.join(missing_packages)})? [y/n]: ")
+        if response.lower() == 'y':
+            try:
+                for package in missing_packages:
+                    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+                logger.info("Зависимости успешно установлены")
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Ошибка при установке зависимостей: {e}")
+                sys.exit(1)
+        else:
+            logger.error("Проект не может работать без необходимых зависимостей. Установите их вручную с помощью 'pip install flask psutil'")
+            sys.exit(1)
+
 class PluginManager:
     def __init__(self, event_bus, state):
         self.event_bus = event_bus
@@ -22,11 +50,12 @@ class PluginManager:
 
     def load_plugins(self, plugins_directory="modules"):
         logger.info(f"Начинаю загрузку плагинов из {plugins_directory}")
-        plugins_directory = os.path.normpath(plugins_directory)  # Нормализуем путь
+        plugins_directory = os.path.normpath(plugins_directory)
+        logger.info(f"Абсолютный путь к {plugins_directory}: {os.path.abspath(plugins_directory)}")
         for root, dirs, files in os.walk(plugins_directory):
             logger.info(f"Проверка директории: {root}")
+            logger.info(f"Файлы в директории: {files}")
             if "__init__.py" in files and "plugin.py" in files:
-                # Преобразуем путь в имя модуля
                 relative_path = os.path.relpath(root, os.path.dirname(os.path.abspath(__file__)))
                 module_name = relative_path.replace(os.sep, ".")
                 plugin_module_name = f"{module_name}.plugin"
@@ -72,6 +101,9 @@ async def main():
         await asyncio.sleep(1)
 
 if __name__ == "__main__":
+    logger.info(f"Запуск проекта с Python {sys.version}")
+    # Проверяем и устанавливаем зависимости, если их нет
+    check_and_install_dependencies()
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.daemon = True
     flask_thread.start()
