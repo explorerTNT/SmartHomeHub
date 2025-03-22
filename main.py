@@ -12,7 +12,9 @@ from web.views import app
 from core.logger import logger
 
 # Добавляем корень проекта в sys.path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(BASE_DIR)
+logger.info(f"Текущий sys.path: {sys.path}")
 
 # Список зависимостей
 REQUIRED_PACKAGES = ["flask", "psutil"]
@@ -51,12 +53,14 @@ class PluginManager:
     def load_plugins(self, plugins_directory="modules"):
         logger.info(f"Начинаю загрузку плагинов из {plugins_directory}")
         plugins_directory = os.path.normpath(plugins_directory)
-        logger.info(f"Абсолютный путь к {plugins_directory}: {os.path.abspath(plugins_directory)}")
-        for root, dirs, files in os.walk(plugins_directory):
+        abs_plugins_dir = os.path.join(BASE_DIR, plugins_directory)
+        logger.info(f"Абсолютный путь к {plugins_directory}: {abs_plugins_dir}")
+        for root, dirs, files in os.walk(abs_plugins_dir):
             logger.info(f"Проверка директории: {root}")
             logger.info(f"Файлы в директории: {files}")
             if "__init__.py" in files and "plugin.py" in files:
-                relative_path = os.path.relpath(root, os.path.dirname(os.path.abspath(__file__)))
+                # Формируем имя модуля относительно корня проекта
+                relative_path = os.path.relpath(root, BASE_DIR)
                 module_name = relative_path.replace(os.sep, ".")
                 plugin_module_name = f"{module_name}.plugin"
                 logger.info(f"Обнаружен модуль: {module_name}, пытаюсь загрузить {plugin_module_name}")
@@ -102,7 +106,6 @@ async def main():
 
 if __name__ == "__main__":
     logger.info(f"Запуск проекта с Python {sys.version}")
-    # Проверяем и устанавливаем зависимости, если их нет
     check_and_install_dependencies()
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.daemon = True
